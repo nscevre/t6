@@ -1021,10 +1021,15 @@ function go(n,step,dir){
 /* closing film: plays after the last step of the last slide */
 const film=$('#film'),fv=$('video',film);let filmOn=false,filmReady=false;
 function filmPrep(){
-  if(filmReady)return;const d=document.getElementById('filmdata');if(!d)return;filmReady=true;
-  const t=d.textContent.trim(),C=4<<20,parts=[];
-  for(let i=0;i<t.length;i+=C){const b=atob(t.slice(i,i+C)),u=new Uint8Array(b.length);for(let j=0;j<b.length;j++)u[j]=b.charCodeAt(j);parts.push(u);}
-  d.remove();fv.src=URL.createObjectURL(new Blob(parts,{type:'video/mp4'}));fv.load();
+  if(filmReady)return;
+  // over a network the film data is still streaming in after the deck starts: wait for the parser to finish
+  if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',filmPrep,{once:true});return;}
+  const d=document.getElementById('filmdata');if(!d)return;
+  try{
+    const t=d.textContent.trim(),C=4<<20,parts=[];
+    for(let i=0;i<t.length;i+=C){const b=atob(t.slice(i,i+C)),u=new Uint8Array(b.length);for(let j=0;j<b.length;j++)u[j]=b.charCodeAt(j);parts.push(u);}
+    d.remove();fv.src=URL.createObjectURL(new Blob(parts,{type:'video/mp4'}));fv.load();filmReady=true;
+  }catch(e){console.error('film',e);}
 }
 function filmOpen(){filmPrep();if(!filmReady)return;filmOn=true;film.style.display='block';try{fv.currentTime=0;}catch(e){}const p=fv.play();p&&p.catch&&p.catch(()=>{});}
 function filmClose(){filmOn=false;fv.pause();film.style.display='none';}
